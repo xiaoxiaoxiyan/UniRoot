@@ -1,0 +1,85 @@
+<resources>
+    <string name="app_name">UniRoot</string>
+    <string name="home_not_installed">未安装</string>
+    <string name="home_installed">已安装</string>
+    <string name="home_click_to_install">点击安装</string>
+    <string name="home_working">工作中</string>
+    <string name="home_version">版本: %1$s</string>
+    <string name="home_superuser_count">超级用户: %1$d</string>
+    <string name="home_module_count">模块: %1$d</string>
+    <string name="home_kernel_version">内核版本: %1$s</string>
+    <string name="home_manager_version">管理器版本: %1$s</string>
+    <string name="home_selinux_status">SELinux: %1$s</string>
+    <string name="home_seccomp_status">Seccomp: %1$s</string>
+
+    <string name="install_title">安装 Root 方案</string>
+    <string name="install_select_category">选择 Root 类别</string>
+    <string name="install_select_provider">选择 Root 方案</string>
+    <string name="install_category_kernelsu">KernelSU 类</string>
+    <string name="install_category_kernelsu_desc">基于内核的 Root 方案</string>
+    <string name="install_category_magisk">Magisk 类</string>
+    <string name="install_category_magisk_desc">基于用户空间的 Root 方案</string>
+    <string name="install_category_apatch">APatch 类</string>
+    <string name="install_category_apatch_desc">基于内核修补的 Root 方案</string>
+
+    <string name="provider_kernelsu">KernelSU</string>
+    <string name="provider_kernelsu_next">KernelSU Next</string>
+    <string name="provider_sukisu_ultra">SukiSU Ultra</string>
+    <string name="provider_magisk">Magisk</string>
+    <string name="provider_magisk_kitsune">Magisk Kitsune</string>
+    <string name="provider_apatch">APatch</string>
+
+    <string name="patch_select_boot_img">选择 Boot 镜像</string>
+    <string name="patch_start">开始修补</string>
+    <string name="patch_patching">正在修补…</string>
+    <string name="patch_success">修补成功</string>
+    <string name="patch_failed">修补失败</string>
+    <string name="patch_set_superkey">设置超级密钥</string>
+    <string name="patch_superkey_hint">请输入超级密钥（仅APatch需要）</string>
+
+    <string name="flash_ak3">刷入 AnyKernel3</string>
+    <string name="flash_select_zip">选择 ZIP 文件</string>
+    <string name="flash_flashing">正在刷入…</string>
+    <string name="flash_success">刷入成功</string>
+    <string name="flash_failed">刷入失败</string>
+
+    <string name="kpm_load">加载 KPM 模块</string>
+    <string name="kpm_embed">嵌入 KPM 模块</string>
+    <string name="kpm_select">选择 KPM 模块</string>
+
+    <string name="superuser_title">超级用户</string>
+    <string name="superuser_grant">允许</string>
+    <string name="superuser_deny">拒绝</string>
+    <string name="superuser_no_apps">没有应用请求 Root 权限</string>
+
+    <string name="module_title">模块</string>
+    <string name="module_install">安装模块</string>
+    <string name="module_enable">启用</string>
+    <string name="module_disable">禁用</string>
+    <string name="module_uninstall">卸载</string>
+    <string name="module_no_modules">没有已安装的模块</string>
+    <string name="module_webui">WebUI</string>
+    <string name="module_action">操作</string>
+
+    <string name="settings_title">设置</string>
+    <string name="settings_current_provider">当前 Root 方案</string>
+    <string name="settings_overlayfs">使用 OverlayFS</string>
+    <string name="settings_magic_mount">使用 Magic Mount</string>
+    <string name="settings_mount_mode">挂载模式</string>
+    <string name="settings_su_safemode">安全模式</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_clear_logs">清除日志</string>
+    <string name="settings_uninstall">卸载 Root</string>
+
+    <string name="reboot_title">重启</string>
+    <string name="reboot_normal">正常重启</string>
+    <string name="reboot_recovery">重启到 Recovery</string>
+    <string name="reboot_bootloader">重启到 Bootloader</string>
+    <string name="reboot_download">重启到 Download</string>
+    <string name="reboot_edl">重启到 EDL</string>
+    <string name="reboot_userspace">软重启</string>
+
+    <string name="about_source_code">源代码</string>
+    <string name="about_version">版本 %1$s</string>
+    <string name="about_license">GPL-3.0 License</string>
+</resources>
