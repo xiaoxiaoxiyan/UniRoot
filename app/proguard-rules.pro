@@ -1,7 +1,7 @@
 # UniRoot ProGuard Rules
 
 # Keep JNI methods
--keepclasswithmembernames class * {
+-keepclasseswithmembernames class * {
     native <methods>;
 }
 
@@ -9,10 +9,14 @@
 -keep class com.uniroot.native.NativeBridge { *; }
 
 # Keep provider enums
--keep class com.uniroot.provider.RootProvider { *; }
--keep class com.uniroot.provider.RootCategory { *; }
+-keepclassmembers enum class com.uniroot.provider.RootProvider {
+    *;
+}
+-keepclassmembers enum class com.uniroot.provider.RootCategory {
+    *;
+}
 
-# Keep serializable data classes
+# Keep data classes
 -keep class com.uniroot.provider.RootState { *; }
 -keep class com.uniroot.patch.PatchResult { *; }
 -keep class com.uniroot.patch.AK3Flasher$FlashResult { *; }
@@ -20,3 +24,12 @@
 
 # Compose
 -dontwarn androidx.compose.**
+
+# Hilt
+-dontwarn dagger.hilt.**
+
+# Kotlin
+-dontwarn kotlin.**
+-keepclassmembers class **$WhenMappings {
+    <fields>;
+}
