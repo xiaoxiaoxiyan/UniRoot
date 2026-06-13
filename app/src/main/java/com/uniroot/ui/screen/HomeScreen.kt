@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -90,7 +92,7 @@ fun StatusCard(
             if (rootState.isInstalled) {
                 // 已安装状态
                 Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Filled.CheckCircle,
+                    imageVector = Icons.Filled.CheckCircle,
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
                     tint = SuccessGreen
@@ -126,7 +128,7 @@ fun StatusCard(
             } else {
                 // 未安装状态 - KSU风格
                 Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Filled.Warning,
+                    imageVector = Icons.Filled.Warning,
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
                     tint = WarningYellow
@@ -151,7 +153,7 @@ fun StatusCard(
                     shape = MaterialTheme.shapes.large
                 ) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Filled.InstallMobile,
+                        imageVector = Icons.Filled.Download,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp)
                     )
@@ -196,7 +198,7 @@ fun UpdateCard() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = androidx.compose.material.icons.Icons.Filled.SystemUpdate,
+                imageVector = Icons.Filled.Update,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -254,7 +256,7 @@ fun InfoCard(
                 shape = MaterialTheme.shapes.medium
             ) {
                 Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Filled.RestartAlt,
+                    imageVector = Icons.Filled.Refresh,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )

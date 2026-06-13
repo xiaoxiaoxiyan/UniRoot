@@ -33,7 +33,7 @@ fun PatchScreen(
     var superKey by remember { mutableStateOf("") }
     var isPatching by remember { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(0f) }
-    var patchResult by remember { mutableStateOf<BootPatcher.PatchResult?>(null) }
+    var patchResult: BootPatcher.PatchResult? by remember { mutableStateOf(null) }
     var kpmModules by remember { mutableStateOf(listOf<String>()) }
 
     // 文件选择器
