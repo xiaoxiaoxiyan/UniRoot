@@ -10,11 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.uniroot.R
 import com.uniroot.patch.BootPatcher
-import com.uniroot.patch.KPMManager
+import com.uniroot.patch.PatchResult
 import com.uniroot.provider.RootProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -33,10 +34,9 @@ fun PatchScreen(
     var superKey by remember { mutableStateOf("") }
     var isPatching by remember { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(0f) }
-    var patchResult: BootPatcher.PatchResult? by remember { mutableStateOf(null) }
+    var patchResult by remember { mutableStateOf<PatchResult?>(null) }
     var kpmModules by remember { mutableStateOf(listOf<String>()) }
 
-    // 文件选择器
     val bootImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -68,16 +68,13 @@ fun PatchScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 方案信息
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = provider.displayName,
                         style = MaterialTheme.typography.titleLarge,
@@ -93,7 +90,6 @@ fun PatchScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 选择Boot镜像
             OutlinedButton(
                 onClick = { bootImageLauncher.launch("*/*") },
                 modifier = Modifier.fillMaxWidth(),
@@ -109,7 +105,6 @@ fun PatchScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // APatch需要超级密钥
             if (provider.requiresSuperKey) {
                 OutlinedTextField(
                     value = superKey,
@@ -118,20 +113,17 @@ fun PatchScreen(
                     placeholder = { Text("请输入强密码") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium,
-                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                    visualTransformation = PasswordVisualTransformation()
                 )
-
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // KPM模块支持
             if (provider.supportsKPM) {
                 Text(
                     text = "KPM 模块",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedButton(
@@ -163,11 +155,9 @@ fun PatchScreen(
                         }
                     }
                 }
-
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // 修补进度
             if (isPatching) {
                 LinearProgressIndicator(
                     progress = { progress },
@@ -182,13 +172,13 @@ fun PatchScreen(
                 )
             }
 
-            // 修补结果
-            patchResult?.let { result ->
+            val currentResult = patchResult
+            if (currentResult != null) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (result.success) {
+                        containerColor = if (currentResult.success) {
                             MaterialTheme.colorScheme.primaryContainer
                         } else {
                             MaterialTheme.colorScheme.errorContainer
@@ -197,19 +187,18 @@ fun PatchScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Icon(
-                            if (result.success) Icons.Filled.CheckCircle else Icons.Filled.Error,
+                            if (currentResult.success) Icons.Filled.CheckCircle else Icons.Filled.Error,
                             contentDescription = null,
-                            tint = if (result.success) androidx.compose.ui.graphics.Color(0xFF4CAF50)
-                            else androidx.compose.ui.graphics.Color(0xFFF44336)
+                            tint = if (currentResult.success) Color(0xFF4CAF50) else Color(0xFFF44336)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = if (result.success) "修补成功！" else "修补失败: ${result.error}",
+                            text = if (currentResult.success) "修补成功！" else "修补失败: ${currentResult.error}",
                             style = MaterialTheme.typography.bodyMedium
                         )
-                        if (result.success && result.outputPath != null) {
+                        if (currentResult.success && currentResult.outputPath != null) {
                             Text(
-                                text = "输出: ${result.outputPath}",
+                                text = "输出: ${currentResult.outputPath}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -220,7 +209,6 @@ fun PatchScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // 开始修补按钮
             Button(
                 onClick = {
                     scope.launch(Dispatchers.IO) {
