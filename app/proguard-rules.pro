@@ -6,21 +6,11 @@
 }
 
 # Keep NativeBridge
--keep class com.uniroot.native.NativeBridge { *; }
-
-# Keep provider enums
--keepclassmembers enum class com.uniroot.provider.RootProvider {
-    *;
-}
--keepclassmembers enum class com.uniroot.provider.RootCategory {
-    *;
-}
+-keep class com.uniroot.native.NativeBridge
 
 # Keep data classes
--keep class com.uniroot.provider.RootState { *; }
--keep class com.uniroot.patch.PatchResult { *; }
--keep class com.uniroot.patch.AK3Flasher$FlashResult { *; }
--keep class com.uniroot.patch.KPMManager$KPMModule { *; }
+-keep class com.uniroot.provider.RootState
+-keep class com.uniroot.patch.PatchResult
 
 # Compose
 -dontwarn androidx.compose.**
@@ -30,6 +20,3 @@
 
 # Kotlin
 -dontwarn kotlin.**
--keepclassmembers class **$WhenMappings {
-    <fields>;
-}
