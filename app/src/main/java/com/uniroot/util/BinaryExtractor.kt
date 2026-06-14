@@ -6,7 +6,7 @@ import java.io.FileOutputStream
 
 /**
  * 二进制文件提取器
- * 从APK assets中提取工具二进制到应用私有目录
+ * 从APK assets中提取工具二进制到应用私有目录或指定工作目录
  */
 object BinaryExtractor {
 
@@ -15,10 +15,24 @@ object BinaryExtractor {
     fun getBinDir(context: Context): File = File(context.filesDir, BIN_DIR)
 
     /**
-     * 提取指定方案的所有二进制文件
+     * 提取指定方案的所有二进制文件到默认目录
      */
     fun extractProviderBinaries(context: Context, providerId: String): File {
         val targetDir = File(getBinDir(context), providerId)
+        extractToDir(context, providerId, targetDir)
+        return targetDir
+    }
+
+    /**
+     * 提取指定方案的所有二进制文件到指定工作目录
+     * 用于修补时创建独立的工作环境
+     */
+    fun extractToWorkDir(context: Context, providerId: String, workDir: File): File {
+        extractToDir(context, providerId, workDir)
+        return workDir
+    }
+
+    private fun extractToDir(context: Context, providerId: String, targetDir: File) {
         if (!targetDir.exists()) targetDir.mkdirs()
 
         val assetDir = when (providerId) {
@@ -27,25 +41,23 @@ object BinaryExtractor {
             "sukisu_ultra" -> "sukisu_ultra"
             "apatch" -> "apatch"
             "magisk", "magisk_kitsune" -> "magisk"
-            else -> return targetDir
+            else -> return
         }
 
         val assets = context.assets.list(assetDir) ?: emptyArray()
         for (assetName in assets) {
             val targetFile = File(targetDir, assetName)
-            if (!targetFile.exists()) {
-                try {
-                    context.assets.open("$assetDir/$assetName").use { input ->
-                        FileOutputStream(targetFile).use { output ->
-                            input.copyTo(output)
-                        }
+            try {
+                context.assets.open("$assetDir/$assetName").use { input ->
+                    FileOutputStream(targetFile).use { output ->
+                        input.copyTo(output)
                     }
-                    targetFile.setExecutable(true, false)
-                    targetFile.setReadable(true, false)
-                } catch (_: Exception) { }
-            }
+                }
+                targetFile.setExecutable(true, false)
+                targetFile.setReadable(true, false)
+                targetFile.setWritable(true, false)
+            } catch (_: Exception) { }
         }
-        return targetDir
     }
 
     /**
@@ -94,5 +106,21 @@ object BinaryExtractor {
             if (module.name.contains("android$androidVer")) return module.absolutePath
         }
         return modules.firstOrNull()?.absolutePath ?: ""
+    }
+
+    /**
+     * 获取匹配当前内核的kernelsu.ko文件名（用于在workDir中查找）
+     */
+    fun selectKernelSUKoName(context: Context, providerId: String): String {
+        val dir = File(getBinDir(context), providerId)
+        if (!dir.exists()) return ""
+
+        val androidVer = android.os.Build.VERSION.RELEASE.split(".").firstOrNull() ?: ""
+        val modules = dir.listFiles()?.filter { it.name.endsWith("_kernelsu.ko") } ?: emptyList()
+
+        for (module in modules) {
+            if (module.name.contains("android$androidVer")) return module.name
+        }
+        return modules.firstOrNull()?.name ?: ""
     }
 }

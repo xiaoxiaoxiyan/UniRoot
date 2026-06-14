@@ -21,7 +21,7 @@ KSU_RELEASE=$(curl -sL -H "Authorization: token $GH_TOKEN" "https://api.github.c
 KSU_VER=$(echo "$KSU_RELEASE" | python3 -c "import json,sys;print(json.load(sys.stdin)['tag_name'])")
 echo "KernelSU version: $KSU_VER"
 
-# 下载kernelsu.ko内核模块
+# 下载kernelsu.ko内核模块和ksuinit
 for entry in $(echo "$KSU_RELEASE" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
@@ -84,14 +84,16 @@ if [ -n "$APATCH_APK_URL" ]; then
     gh_curl "$APATCH_APK_URL" "/tmp/apatch.apk"
     mkdir -p /tmp/apatch_extracted
     unzip -o /tmp/apatch.apk -d /tmp/apatch_extracted 2>/dev/null || true
-    # 从assets提取kpimg
-    if [ -f "/tmp/apatch_extracted/assets/kpimg" ]; then
-        cp "/tmp/apatch_extracted/assets/kpimg" "$ASSETS_DIR/apatch/kpimg"
-        chmod +x "$ASSETS_DIR/apatch/kpimg"
-        echo "  提取 kpimg (assets) 成功"
-    fi
-    # 从lib/arm64-v8a提取kptools和kpatch（核心二进制以.so形式存储）
-    for pair in "libkptools.so:kptools" "libkpatch.so:kpatch" "libmagiskboot.so:magiskboot" "libbootctl.so:bootctl"; do
+    # 从assets提取kpimg和shell脚本
+    for f in kpimg InstallAP.sh boot_patch.sh util_functions.sh boot_extract.sh; do
+        if [ -f "/tmp/apatch_extracted/assets/$f" ]; then
+            cp "/tmp/apatch_extracted/assets/$f" "$ASSETS_DIR/apatch/$f"
+            chmod +x "$ASSETS_DIR/apatch/$f"
+            echo "  提取 $f (assets) 成功"
+        fi
+    done
+    # 从lib/arm64-v8a提取核心二进制
+    for pair in "libkptools.so:kptools" "libkpatch.so:kpatch" "libmagiskboot.so:magiskboot" "libbootctl.so:bootctl" "libapd.so:apd"; do
         src=$(echo "$pair" | cut -d: -f1)
         dst=$(echo "$pair" | cut -d: -f2)
         if [ -f "/tmp/apatch_extracted/lib/arm64-v8a/$src" ]; then
@@ -121,8 +123,8 @@ if [ -n "$MAGISK_APK_URL" ]; then
     gh_curl "$MAGISK_APK_URL" "/tmp/magisk.apk"
     mkdir -p /tmp/magisk_extracted
     unzip -o /tmp/magisk.apk -d /tmp/magisk_extracted 2>/dev/null || true
-    # 从lib/arm64-v8a提取核心二进制（Magisk以.so形式存储）
-    for pair in "libmagiskboot.so:magiskboot" "libmagisk.so:magisk64" "libmagiskinit.so:magiskinit" "libmagiskpolicy.so:magiskpolicy" "libbusybox.so:busybox"; do
+    # 从lib/arm64-v8a提取核心二进制
+    for pair in "libmagiskboot.so:magiskboot" "libmagisk.so:magisk64" "libmagiskinit.so:magiskinit" "libmagiskpolicy.so:magiskpolicy" "libbusybox.so:busybox" "libinit-ld.so:init-ld"; do
         src=$(echo "$pair" | cut -d: -f1)
         dst=$(echo "$pair" | cut -d: -f2)
         if [ -f "/tmp/magisk_extracted/lib/arm64-v8a/$src" ]; then
@@ -133,11 +135,20 @@ if [ -n "$MAGISK_APK_URL" ]; then
             echo "  警告: $dst (lib/arm64-v8a/$src) 未在Magisk APK中找到"
         fi
     done
-    # 从assets提取stub.apk
-    if [ -f "/tmp/magisk_extracted/assets/stub.apk" ]; then
-        cp "/tmp/magisk_extracted/assets/stub.apk" "$ASSETS_DIR/magisk/stub.apk"
-        echo "  提取 stub.apk 成功"
+    # 从lib/armeabi-v7a提取magisk32
+    if [ -f "/tmp/magisk_extracted/lib/armeabi-v7a/libmagisk.so" ]; then
+        cp "/tmp/magisk_extracted/lib/armeabi-v7a/libmagisk.so" "$ASSETS_DIR/magisk/magisk32"
+        chmod +x "$ASSETS_DIR/magisk/magisk32"
+        echo "  提取 magisk32 (lib/armeabi-v7a/libmagisk.so) 成功"
     fi
+    # 从assets提取shell脚本和stub.apk
+    for f in stub.apk boot_patch.sh util_functions.sh addon.d.sh app_functions.sh; do
+        if [ -f "/tmp/magisk_extracted/assets/$f" ]; then
+            cp "/tmp/magisk_extracted/assets/$f" "$ASSETS_DIR/magisk/$f"
+            chmod +x "$ASSETS_DIR/magisk/$f"
+            echo "  提取 $f (assets) 成功"
+        fi
+    done
     rm -rf /tmp/magisk.apk /tmp/magisk_extracted
 else
     echo "  警告: 未找到Magisk APK下载链接"
