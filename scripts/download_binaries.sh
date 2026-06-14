@@ -2,8 +2,15 @@
 # 下载各Root方案的内核模块和工具二进制
 set -e
 
-ASSETS_DIR="app/src/main/assets"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+ASSETS_DIR="$PROJECT_DIR/app/src/main/assets"
 GH_TOKEN="${GITHUB_TOKEN:-}"
+
+# 确保目录存在
+for d in kernelsu kernelsu_next sukisu_ultra apatch magisk; do
+    mkdir -p "$ASSETS_DIR/$d"
+done
 
 gh_curl() {
     curl -sL -H "Authorization: token $GH_TOKEN" -H "Accept: application/vnd.github+json" "$1" -o "$2"
@@ -69,22 +76,28 @@ APATCH_APK_URL=$(echo "$APATCH_RELEASE" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 for a in d.get('assets',[]):
-    if a['name'].endswith('.apk') and 'release' in a['name']:
+    if a['name'].endswith('.apk'):
         print(a['browser_download_url'])
         break")
-echo "  下载 APatch APK"
-gh_curl "$APATCH_APK_URL" "/tmp/apatch.apk"
-
-# 从APK中提取kptools和kpimg
-cd /tmp && unzip -o apatch.apk -d apatch_extracted 2>/dev/null || true
-for bin in kptools kpimg kpatch; do
-    if [ -f "/tmp/apatch_extracted/assets/$bin" ]; then
-        cp "/tmp/apatch_extracted/assets/$bin" "$ASSETS_DIR/apatch/$bin"
-        chmod +x "$ASSETS_DIR/apatch/$bin"
-        echo "  提取 $bin 成功"
-    fi
-done
-rm -rf /tmp/apatch.apk /tmp/apatch_extracted
+if [ -n "$APATCH_APK_URL" ]; then
+    echo "  下载 APatch APK"
+    gh_curl "$APATCH_APK_URL" "/tmp/apatch.apk"
+    # 从APK中提取kptools和kpimg
+    mkdir -p /tmp/apatch_extracted
+    unzip -o /tmp/apatch.apk -d /tmp/apatch_extracted 2>/dev/null || true
+    for bin in kptools kpimg kpatch; do
+        if [ -f "/tmp/apatch_extracted/assets/$bin" ]; then
+            cp "/tmp/apatch_extracted/assets/$bin" "$ASSETS_DIR/apatch/$bin"
+            chmod +x "$ASSETS_DIR/apatch/$bin"
+            echo "  提取 $bin 成功"
+        else
+            echo "  警告: $bin 未在APatch APK中找到"
+        fi
+    done
+    rm -rf /tmp/apatch.apk /tmp/apatch_extracted
+else
+    echo "  警告: 未找到APatch APK下载链接"
+fi
 
 echo "=== 下载 Magisk 二进制 ==="
 MAGISK_RELEASE=$(curl -sL -H "Authorization: token $GH_TOKEN" "https://api.github.com/repos/topjohnwu/Magisk/releases/latest")
@@ -95,23 +108,29 @@ for a in d.get('assets',[]):
     if a['name'].endswith('.apk') and not a['name'].startswith('app-'):
         print(a['browser_download_url'])
         break")
-echo "  下载 Magisk APK"
-gh_curl "$MAGISK_APK_URL" "/tmp/magisk.apk"
-
-cd /tmp && unzip -o magisk.apk -d magisk_extracted 2>/dev/null || true
-for bin in magiskboot magisk32 magisk64 magiskinit; do
-    if [ -f "/tmp/magisk_extracted/assets/$bin" ]; then
-        cp "/tmp/magisk_extracted/assets/$bin" "$ASSETS_DIR/magisk/$bin"
-        chmod +x "$ASSETS_DIR/magisk/$bin"
-        echo "  提取 $bin 成功"
+if [ -n "$MAGISK_APK_URL" ]; then
+    echo "  下载 Magisk APK"
+    gh_curl "$MAGISK_APK_URL" "/tmp/magisk.apk"
+    mkdir -p /tmp/magisk_extracted
+    unzip -o /tmp/magisk.apk -d /tmp/magisk_extracted 2>/dev/null || true
+    for bin in magiskboot magisk32 magisk64 magiskinit; do
+        if [ -f "/tmp/magisk_extracted/assets/$bin" ]; then
+            cp "/tmp/magisk_extracted/assets/$bin" "$ASSETS_DIR/magisk/$bin"
+            chmod +x "$ASSETS_DIR/magisk/$bin"
+            echo "  提取 $bin 成功"
+        else
+            echo "  警告: $bin 未在Magisk APK中找到"
+        fi
+    done
+    if [ -f "/tmp/magisk_extracted/assets/stub.apk" ]; then
+        cp "/tmp/magisk_extracted/assets/stub.apk" "$ASSETS_DIR/magisk/stub.apk"
+        echo "  提取 stub.apk 成功"
     fi
-done
-if [ -f "/tmp/magisk_extracted/assets/stub.apk" ]; then
-    cp "/tmp/magisk_extracted/assets/stub.apk" "$ASSETS_DIR/magisk/stub.apk"
-    echo "  提取 stub.apk 成功"
+    rm -rf /tmp/magisk.apk /tmp/magisk_extracted
+else
+    echo "  警告: 未找到Magisk APK下载链接"
 fi
-rm -rf /tmp/magisk.apk /tmp/magisk_extracted
 
 echo "=== 下载完成 ==="
 echo "Assets目录结构:"
-find "$ASSETS_DIR" -type f | sort
+find "$ASSETS_DIR" -type f ! -name '.gitkeep' | sort
