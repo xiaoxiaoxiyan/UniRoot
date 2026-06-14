@@ -80,20 +80,27 @@ object BootPatcher {
         onProgress(0.3f)
         val ksud = BinaryExtractor.getKsudPath(context)
         val ksuKo = BinaryExtractor.selectKernelSUKo(context, "kernelsu")
+        val magiskboot = BinaryExtractor.getMagiskbootPath(context)
+        val mb = if (magiskboot.isNotEmpty()) magiskboot else "magiskboot"
+
+        val workDir = "/data/local/tmp/uniroot_ksu"
 
         val cmd = buildString {
+            append("mkdir -p $workDir && cd $workDir && ")
             if (ksud.isNotEmpty()) {
+                // 使用ksud修补（优先）
                 append("$ksud boot-patch --boot $bootImagePath --out $outputPath")
             } else if (ksuKo.isNotEmpty()) {
-                // 使用内核模块直接注入
-                append("cp $ksuKo /data/local/tmp/kernelsu.ko && ")
-                append("magiskboot unpack $bootImagePath && ")
-                append("magiskboot cpio ramdisk.cpio 'mkdir kernelsu' && ")
-                append("magiskboot cpio ramdisk.cpio 'add 0644 kernelsu/kernelsu.ko /data/local/tmp/kernelsu.ko' && ")
-                append("magiskboot repack $bootImagePath $outputPath")
+                // 使用magiskboot + 内核模块直接注入
+                append("cp $ksuKo $workDir/kernelsu.ko && ")
+                append("$mb unpack $bootImagePath && ")
+                append("$mb cpio ramdisk.cpio 'mkdir kernelsu' && ")
+                append("$mb cpio ramdisk.cpio 'add 0644 kernelsu/kernelsu.ko $workDir/kernelsu.ko' && ")
+                append("$mb repack $bootImagePath $outputPath")
             } else {
                 append("ksud boot-patch --boot $bootImagePath --out $outputPath")
             }
+            append(" && cd / && rm -rf $workDir")
         }
         onProgress(0.5f)
         val result = executeRootCommand(cmd)
@@ -150,17 +157,28 @@ object BootPatcher {
     ): Boolean {
         onProgress(0.3f)
         val magiskboot = BinaryExtractor.getMagiskbootPath(context)
+        val magisk64 = BinaryExtractor.getMagisk64Path(context)
+        val magiskinit = BinaryExtractor.getMagiskinitPath(context)
+        val magiskpolicy = BinaryExtractor.getMagiskpolicyPath(context)
         val mb = if (magiskboot.isNotEmpty()) magiskboot else "magiskboot"
 
-        // 复制magisk二进制到工作目录
         val workDir = "/data/local/tmp/uniroot_magisk"
         val magiskDir = BinaryExtractor.getBinDir(context).absolutePath + "/magisk"
 
         val cmd = buildString {
             append("mkdir -p $workDir && cd $workDir && ")
+            // 复制所有magisk二进制到工作目录
             append("cp $magiskDir/* $workDir/ 2>/dev/null; ")
+            // 使用magiskboot解包boot镜像
             append("$mb unpack $bootImagePath && ")
-            append("$mb cpio ramdisk.cpio 'magisk' && ")
+            // magiskinit作为init注入
+            if (magiskinit.isNotEmpty()) {
+                append("$mb cpio ramdisk.cpio backup ramdisk.cpio.orig && ")
+                append("$mb cpio ramdisk.cpio 'add 0750 init $magiskinit' && ")
+            } else {
+                append("$mb cpio ramdisk.cpio 'magisk' && ")
+            }
+            // 重新打包
             append("$mb repack $bootImagePath $outputPath && ")
             append("cd / && rm -rf $workDir")
         }
@@ -189,16 +207,29 @@ object BootPatcher {
         onProgress(0.3f)
         val kptools = BinaryExtractor.getKptoolsPath(context)
         val kpimg = BinaryExtractor.getKpimgPath(context)
+        val kpatch = BinaryExtractor.getKpatchPath(context)
+        val apatchMagiskboot = BinaryExtractor.getAPatchMagiskbootPath(context)
         val kpt = if (kptools.isNotEmpty()) kptools else "kptools"
 
+        val workDir = "/data/local/tmp/uniroot_apatch"
+        val apatchDir = BinaryExtractor.getBinDir(context).absolutePath + "/apatch"
+
         val cmd = buildString {
+            append("mkdir -p $workDir && cd $workDir && ")
+            // 复制所有apatch二进制到工作目录
+            append("cp $apatchDir/* $workDir/ 2>/dev/null; ")
+            // 使用kptools修补boot镜像
             append("$kpt patch --boot $bootImagePath --out $outputPath --skey $superKey")
             if (kpimg.isNotEmpty()) {
                 append(" --kpimg $kpimg")
             }
+            if (kpatch.isNotEmpty()) {
+                append(" --kpatch $kpatch")
+            }
             kpmModules?.forEach { kpm ->
                 append(" --embed-kpm $kpm")
             }
+            append(" && cd / && rm -rf $workDir")
         }
         onProgress(0.5f)
         val result = executeRootCommand(cmd)

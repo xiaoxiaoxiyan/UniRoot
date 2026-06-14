@@ -71,8 +71,13 @@ object BinaryExtractor {
     }
 
     fun getKptoolsPath(context: Context): String = getBinaryPath(context, "apatch", "kptools")
+    fun getKpatchPath(context: Context): String = getBinaryPath(context, "apatch", "kpatch")
     fun getKpimgPath(context: Context): String = getBinaryPath(context, "apatch", "kpimg")
+    fun getAPatchMagiskbootPath(context: Context): String = getBinaryPath(context, "apatch", "magiskboot")
     fun getMagiskbootPath(context: Context): String = getBinaryPath(context, "magisk", "magiskboot")
+    fun getMagisk64Path(context: Context): String = getBinaryPath(context, "magisk", "magisk64")
+    fun getMagiskinitPath(context: Context): String = getBinaryPath(context, "magisk", "magiskinit")
+    fun getMagiskpolicyPath(context: Context): String = getBinaryPath(context, "magisk", "magiskpolicy")
 
     /**
      * 获取匹配当前内核的kernelsu.ko

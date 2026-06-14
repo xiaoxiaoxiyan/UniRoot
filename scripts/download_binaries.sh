@@ -82,16 +82,24 @@ for a in d.get('assets',[]):
 if [ -n "$APATCH_APK_URL" ]; then
     echo "  下载 APatch APK"
     gh_curl "$APATCH_APK_URL" "/tmp/apatch.apk"
-    # 从APK中提取kptools和kpimg
     mkdir -p /tmp/apatch_extracted
     unzip -o /tmp/apatch.apk -d /tmp/apatch_extracted 2>/dev/null || true
-    for bin in kptools kpimg kpatch; do
-        if [ -f "/tmp/apatch_extracted/assets/$bin" ]; then
-            cp "/tmp/apatch_extracted/assets/$bin" "$ASSETS_DIR/apatch/$bin"
-            chmod +x "$ASSETS_DIR/apatch/$bin"
-            echo "  提取 $bin 成功"
+    # 从assets提取kpimg
+    if [ -f "/tmp/apatch_extracted/assets/kpimg" ]; then
+        cp "/tmp/apatch_extracted/assets/kpimg" "$ASSETS_DIR/apatch/kpimg"
+        chmod +x "$ASSETS_DIR/apatch/kpimg"
+        echo "  提取 kpimg (assets) 成功"
+    fi
+    # 从lib/arm64-v8a提取kptools和kpatch（核心二进制以.so形式存储）
+    for pair in "libkptools.so:kptools" "libkpatch.so:kpatch" "libmagiskboot.so:magiskboot" "libbootctl.so:bootctl"; do
+        src=$(echo "$pair" | cut -d: -f1)
+        dst=$(echo "$pair" | cut -d: -f2)
+        if [ -f "/tmp/apatch_extracted/lib/arm64-v8a/$src" ]; then
+            cp "/tmp/apatch_extracted/lib/arm64-v8a/$src" "$ASSETS_DIR/apatch/$dst"
+            chmod +x "$ASSETS_DIR/apatch/$dst"
+            echo "  提取 $dst (lib/arm64-v8a/$src) 成功"
         else
-            echo "  警告: $bin 未在APatch APK中找到"
+            echo "  警告: $dst (lib/arm64-v8a/$src) 未在APatch APK中找到"
         fi
     done
     rm -rf /tmp/apatch.apk /tmp/apatch_extracted
@@ -113,15 +121,19 @@ if [ -n "$MAGISK_APK_URL" ]; then
     gh_curl "$MAGISK_APK_URL" "/tmp/magisk.apk"
     mkdir -p /tmp/magisk_extracted
     unzip -o /tmp/magisk.apk -d /tmp/magisk_extracted 2>/dev/null || true
-    for bin in magiskboot magisk32 magisk64 magiskinit; do
-        if [ -f "/tmp/magisk_extracted/assets/$bin" ]; then
-            cp "/tmp/magisk_extracted/assets/$bin" "$ASSETS_DIR/magisk/$bin"
-            chmod +x "$ASSETS_DIR/magisk/$bin"
-            echo "  提取 $bin 成功"
+    # 从lib/arm64-v8a提取核心二进制（Magisk以.so形式存储）
+    for pair in "libmagiskboot.so:magiskboot" "libmagisk.so:magisk64" "libmagiskinit.so:magiskinit" "libmagiskpolicy.so:magiskpolicy" "libbusybox.so:busybox"; do
+        src=$(echo "$pair" | cut -d: -f1)
+        dst=$(echo "$pair" | cut -d: -f2)
+        if [ -f "/tmp/magisk_extracted/lib/arm64-v8a/$src" ]; then
+            cp "/tmp/magisk_extracted/lib/arm64-v8a/$src" "$ASSETS_DIR/magisk/$dst"
+            chmod +x "$ASSETS_DIR/magisk/$dst"
+            echo "  提取 $dst (lib/arm64-v8a/$src) 成功"
         else
-            echo "  警告: $bin 未在Magisk APK中找到"
+            echo "  警告: $dst (lib/arm64-v8a/$src) 未在Magisk APK中找到"
         fi
     done
+    # 从assets提取stub.apk
     if [ -f "/tmp/magisk_extracted/assets/stub.apk" ]; then
         cp "/tmp/magisk_extracted/assets/stub.apk" "$ASSETS_DIR/magisk/stub.apk"
         echo "  提取 stub.apk 成功"
