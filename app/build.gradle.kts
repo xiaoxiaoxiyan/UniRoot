@@ -29,10 +29,20 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("uniroot-release.jks")
+            storePassword = "uniroot2024"
+            keyAlias = "uniroot"
+            keyPassword = "uniroot2024"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -40,6 +50,7 @@ android {
         }
         debug {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

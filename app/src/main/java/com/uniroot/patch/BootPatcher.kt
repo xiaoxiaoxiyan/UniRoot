@@ -1,6 +1,10 @@
 package com.uniroot.patch
 
+import android.content.Context
+import com.uniroot.UniRootApp
 import com.uniroot.provider.RootProvider
+import com.uniroot.util.BinaryExtractor
+import java.io.File
 
 /**
  * Boot镜像修补结果
@@ -14,8 +18,12 @@ data class PatchResult(
 /**
  * Boot镜像修补器
  * 根据不同的Root方案执行不同的修补逻辑
+ * 使用内嵌的二进制工具（ksud/kptools/magiskboot等）
  */
 object BootPatcher {
+
+    private val context: Context
+        get() = UniRootApp.instance
 
     /**
      * 修补Boot镜像
@@ -31,7 +39,6 @@ object BootPatcher {
         return try {
             onProgress(0.1f)
 
-            // 验证输入
             if (bootImagePath.isEmpty()) {
                 return PatchResult(false, error = "Boot镜像路径为空")
             }
@@ -40,9 +47,10 @@ object BootPatcher {
                 return PatchResult(false, error = "APatch需要设置超级密钥")
             }
 
+            // 提取内嵌二进制到工作目录
+            BinaryExtractor.extractProviderBinaries(context, provider.id)
             onProgress(0.2f)
 
-            // 根据不同方案执行修补
             val success = when (provider) {
                 RootProvider.KERNELSU -> patchKernelSU(bootImagePath, outputPath, onProgress)
                 RootProvider.KERNELSU_NEXT -> patchKernelSUNext(bootImagePath, outputPath, onProgress)
@@ -70,8 +78,23 @@ object BootPatcher {
         onProgress: (Float) -> Unit
     ): Boolean {
         onProgress(0.3f)
-        // KernelSU修补：注入kernelsu.ko到boot镜像
-        val cmd = "ksud boot-patch --boot $bootImagePath --out $outputPath"
+        val ksud = BinaryExtractor.getKsudPath(context)
+        val ksuKo = BinaryExtractor.selectKernelSUKo(context, "kernelsu")
+
+        val cmd = buildString {
+            if (ksud.isNotEmpty()) {
+                append("$ksud boot-patch --boot $bootImagePath --out $outputPath")
+            } else if (ksuKo.isNotEmpty()) {
+                // 使用内核模块直接注入
+                append("cp $ksuKo /data/local/tmp/kernelsu.ko && ")
+                append("magiskboot unpack $bootImagePath && ")
+                append("magiskboot cpio ramdisk.cpio 'mkdir kernelsu' && ")
+                append("magiskboot cpio ramdisk.cpio 'add 0644 kernelsu/kernelsu.ko /data/local/tmp/kernelsu.ko' && ")
+                append("magiskboot repack $bootImagePath $outputPath")
+            } else {
+                append("ksud boot-patch --boot $bootImagePath --out $outputPath")
+            }
+        }
         onProgress(0.5f)
         val result = executeRootCommand(cmd)
         onProgress(0.8f)
@@ -84,8 +107,12 @@ object BootPatcher {
         onProgress: (Float) -> Unit
     ): Boolean {
         onProgress(0.3f)
-        // KernelSU Next修补：支持SuList功能
-        val cmd = "ksud boot-patch --boot $bootImagePath --out $outputPath --sulist"
+        val ksud = BinaryExtractor.getKsudPath(context)
+        val cmd = if (ksud.isNotEmpty()) {
+            "$ksud boot-patch --boot $bootImagePath --out $outputPath --sulist"
+        } else {
+            "ksud boot-patch --boot $bootImagePath --out $outputPath --sulist"
+        }
         onProgress(0.5f)
         val result = executeRootCommand(cmd)
         onProgress(0.8f)
@@ -99,10 +126,16 @@ object BootPatcher {
         onProgress: (Float) -> Unit
     ): Boolean {
         onProgress(0.3f)
-        // SukiSU Ultra修补：支持KPM模块嵌入
-        var cmd = "ksud boot-patch --boot $bootImagePath --out $outputPath --kpm"
-        kpmModules?.forEach { kpm ->
-            cmd += " --embed-kpm $kpm"
+        val ksud = BinaryExtractor.getKsudPath(context)
+        val cmd = buildString {
+            if (ksud.isNotEmpty()) {
+                append("$ksud boot-patch --boot $bootImagePath --out $outputPath --kpm")
+            } else {
+                append("ksud boot-patch --boot $bootImagePath --out $outputPath --kpm")
+            }
+            kpmModules?.forEach { kpm ->
+                append(" --embed-kpm $kpm")
+            }
         }
         onProgress(0.5f)
         val result = executeRootCommand(cmd)
@@ -116,10 +149,21 @@ object BootPatcher {
         onProgress: (Float) -> Unit
     ): Boolean {
         onProgress(0.3f)
-        // Magisk修补：修改ramdisk注入magiskinit
-        val cmd = "magiskboot unpack $bootImagePath && " +
-                "magiskboot cpio ramdisk.cpio 'magisk' && " +
-                "magiskboot repack $bootImagePath $outputPath"
+        val magiskboot = BinaryExtractor.getMagiskbootPath(context)
+        val mb = if (magiskboot.isNotEmpty()) magiskboot else "magiskboot"
+
+        // 复制magisk二进制到工作目录
+        val workDir = "/data/local/tmp/uniroot_magisk"
+        val magiskDir = BinaryExtractor.getBinDir(context).absolutePath + "/magisk"
+
+        val cmd = buildString {
+            append("mkdir -p $workDir && cd $workDir && ")
+            append("cp $magiskDir/* $workDir/ 2>/dev/null; ")
+            append("$mb unpack $bootImagePath && ")
+            append("$mb cpio ramdisk.cpio 'magisk' && ")
+            append("$mb repack $bootImagePath $outputPath && ")
+            append("cd / && rm -rf $workDir")
+        }
         onProgress(0.5f)
         val result = executeRootCommand(cmd)
         onProgress(0.8f)
@@ -131,16 +175,8 @@ object BootPatcher {
         outputPath: String,
         onProgress: (Float) -> Unit
     ): Boolean {
-        onProgress(0.3f)
-        // Magisk Kitsune修补：增强隐藏
-        val cmd = "magiskboot unpack $bootImagePath && " +
-                "magiskboot cpio ramdisk.cpio 'magisk' && " +
-                "magiskboot cpio ramdisk.cpio 'kitsune-patch' && " +
-                "magiskboot repack $bootImagePath $outputPath"
-        onProgress(0.5f)
-        val result = executeRootCommand(cmd)
-        onProgress(0.8f)
-        return result
+        // Kitsune使用与Magisk相同的修补逻辑
+        return patchMagisk(bootImagePath, outputPath, onProgress)
     }
 
     private fun patchAPatch(
@@ -151,10 +187,18 @@ object BootPatcher {
         onProgress: (Float) -> Unit
     ): Boolean {
         onProgress(0.3f)
-        // APatch修补：kprobe修补 + SuperKey + KPM嵌入
-        var cmd = "kptools patch --boot $bootImagePath --out $outputPath --skey $superKey"
-        kpmModules?.forEach { kpm ->
-            cmd += " --embed-kpm $kpm"
+        val kptools = BinaryExtractor.getKptoolsPath(context)
+        val kpimg = BinaryExtractor.getKpimgPath(context)
+        val kpt = if (kptools.isNotEmpty()) kptools else "kptools"
+
+        val cmd = buildString {
+            append("$kpt patch --boot $bootImagePath --out $outputPath --skey $superKey")
+            if (kpimg.isNotEmpty()) {
+                append(" --kpimg $kpimg")
+            }
+            kpmModules?.forEach { kpm ->
+                append(" --embed-kpm $kpm")
+            }
         }
         onProgress(0.5f)
         val result = executeRootCommand(cmd)
